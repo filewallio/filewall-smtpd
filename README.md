@@ -8,7 +8,7 @@ then .. does its magic..  and then re-inject the mail into Postfix.
 What you need to do on Postfix side is to edit configuration according to the suggestions made in the Advanced 
 Content Filtering above, but for your convenience, here is the quick version that could work for you too:
 
-######(/etc/postfix/)main.cf:
+###### (/etc/postfix/)main.cf:
 ```
 content_filter = scan:localhost:10025
 receive_override_options = no_address_mappings
