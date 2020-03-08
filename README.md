@@ -1,8 +1,8 @@
 Filewall.io postfix filter
 ===================
 
-This is Python code to achieve Advanced Content Filtering in Postfix
-( http://www.postfix.org/FILTER_README.html ) with filewall.io . This Python code listens on one port to get emails from Postfix,
+This is Python code to achieve Advanced Content Filtering with https://filewall.io in Postfix
+( http://www.postfix.org/FILTER_README.html ) . This Python code listens on one port to get emails from Postfix,
 then .. does its magic..  and then re-inject the mail into Postfix. 
 
 What you need to do on Postfix side is to edit configuration according to the suggestions made in the Advanced 
