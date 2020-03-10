@@ -1,0 +1,10 @@
+[Unit]
+Description=Super Description
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/filewall-smtpd
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

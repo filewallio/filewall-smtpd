@@ -10,11 +10,23 @@ import json
 import requests
 import logging
 import time
+import os
+import configparser
 
-APIKEY = "YOUR-APIKEY"
 
-RECEIVE_ON = ("127.0.0.1", 10025)
-SEND_TO    = ("127.0.0.1", 10026)
+CONFIGFILE = "/etc/filewall-smtpd.conf"
+config = configparser.ConfigParser()
+config.read(CONFIGFILE)
+
+APIKEY = config.get("main","APIKEY")
+RECEIVE_ON = (config.get("main","BIND_HOST"), int(config.get("main","BIND_PORT")))
+SEND_TO = (config.get("main","SENDTO_HOST"), int(config.get("main","SENDTO_PORT")))
+
+
+def main():
+    server = CustomSMTPServer(RECEIVE_ON, None)
+    asyncore.loop()
+
 
 #https://github.com/MiroslavHoudek/postfix-filter-loop
 class CustomSMTPServer(smtpd.SMTPServer):
@@ -38,7 +50,6 @@ class CustomSMTPServer(smtpd.SMTPServer):
             print('Something went south')
             print(traceback.format_exc())
         return
-
 
 class MailPart():
     def __init__(self, part):
@@ -113,7 +124,6 @@ class MailPart():
         del self.part['Content-Type']
         del self.part['Content-Disposition']
         self.part.set_payload('')
-
 
 class Filewall():
     def __init__(self, apikey):
@@ -205,8 +215,3 @@ class Filewall():
         logging.info("Secured file '%s' (%s byte) downloaded" % (filename, len(response.content)))
 
         return True, (filename, response.content)
-
-
-server = CustomSMTPServer(RECEIVE_ON, None)
-asyncore.loop()
-
