@@ -8,6 +8,22 @@ then .. does its magic..  and then re-inject the mail into Postfix.
 What you need to do on Postfix side is to edit configuration according to the suggestions made in the Advanced 
 Content Filtering above, but for your convenience, here is the quick version that could work for you too:
 
+###### Install service:
+```
+$ pip install git+https://github.com/filewallio/postfix-filter
+$ filewall-smtpd installservice
+```
+
+Set your apikey in ```/etc/filewall-smtpd.conf```
+
+###### Start Service
+```
+$ service filewall-smtpd start
+```
+To start filewall-smtpd  at boot time, use ```systemctl enable filewall-smtpd.service```.
+
+
+
 ###### (/etc/postfix/)main.cf:
 ```
 content_filter = scan:localhost:10025

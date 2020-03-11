@@ -10,25 +10,46 @@ import json
 import requests
 import logging
 import time
-import os
+import os, sys
 import configparser
 
-
 CONFIGFILE = "/etc/filewall-smtpd.conf"
-config = configparser.ConfigParser()
-config.read(CONFIGFILE)
-
-APIKEY = config.get("main","APIKEY")
-RECEIVE_ON = (config.get("main","BIND_HOST"), int(config.get("main","BIND_PORT")))
-SEND_TO = (config.get("main","SENDTO_HOST"), int(config.get("main","SENDTO_PORT")))
-
+APIKEY = None
+RECEIVE_ON = None
+SEND_TO = None
 
 def main():
-    server = CustomSMTPServer(RECEIVE_ON, None)
-    asyncore.loop()
+    try:
+        cmd = sys.argv[1]
+    except:
+        cmd = None
+
+    if cmd == "installservice":
+        service_install()
+    elif cmd == "daemon":
+        load_config()
+        server = CustomSMTPServer(RECEIVE_ON, None)
+        asyncore.loop()
+
+def load_config():
+    config = configparser.ConfigParser()
+    config.read(CONFIGFILE)
+    global APIKEY, RECEIVE_ON, SEND_TO
+    APIKEY = config.get("main", "APIKEY")
+    RECEIVE_ON = (config.get("main", "BIND_HOST"), int(config.get("main", "BIND_PORT")))
+    SEND_TO = (config.get("main", "SENDTO_HOST"), int(config.get("main", "SENDTO_PORT")))
+
+def service_install():
+    open('/lib/systemd/system/filewall-smtpd.service',"w").write(filewall_smtpd_service)
+    os.system("chown root:root /lib/systemd/system/filewall-smtpd.service")
+
+    if not os.path.isfile("/etc/filewall-smtpd.conf"):
+        open("/etc/filewall-smtpd.conf","w").write(filewall_smtpd_conf)
+        os.system("chown root:root /etc/filewall-smtpd.conf")
+
+    os.system("systemctl daemon-reload")
 
 
-#https://github.com/MiroslavHoudek/postfix-filter-loop
 class CustomSMTPServer(smtpd.SMTPServer):
     def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
         mailfrom =    mailfrom.replace('\'', '').replace('\"', '')
@@ -215,3 +236,27 @@ class Filewall():
         logging.info("Secured file '%s' (%s byte) downloaded" % (filename, len(response.content)))
 
         return True, (filename, response.content)
+
+
+filewall_smtpd_conf = '''
+[main]
+APIKEY     = your-api-key
+
+BIND_HOST  = 127.0.0.1
+BIND_PORT  = 10025
+SENDTO_HOST  = 127.0.0.1
+SENDTO_PORT  = 10026
+'''
+
+filewall_smtpd_service = '''
+[Unit]
+Description=Super Description
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/filewall-smtpd daemon
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+'''

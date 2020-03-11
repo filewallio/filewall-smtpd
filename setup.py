@@ -24,25 +24,6 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
-# Fields marked as "Optional" may be commented out.
-
-
-class CustomInstallCommand(install):
-
-  def run(self):
-    install.run(self)
-    current_dir_path = os.path.dirname(os.path.realpath(__file__))
-
-    os.system("cp '%s/files/filewall-smtpd.service' '/lib/systemd/system/filewall-smtpd.service'" % ( current_dir_path ))
-    os.system("chown root:root /lib/systemd/system/filewall-smtpd.service")
-
-    if not os.path.isfile("/etc/filewall-smtpd.conf"):
-        os.system("cp '%s/files/filewall-smtpd.conf'    '/etc/filewall-smtpd.conf'" % (current_dir_path))
-        os.system("chown root:root /etc/filewall-smtpd.conf")
-
-    os.system("systemctl daemon-reload")
-    print("#\n# Use 'systemctl enable filewall-smtpd.service' to enable service at boot time\n#")
-
 
 setup(
     # This is the name of your project. The first time you publish this
@@ -186,10 +167,7 @@ setup(
     # If using Python 2.6 or earlier, then these have to be included in
     # MANIFEST.in as well.
     package_data={  # Optional
-        'files': [
-            'files/filewall-smtpd.conf',
-            'files/filewall-smtpd.service'
-        ],
+        'files': [ ],
     },
 
     # Although 'package_data' is the preferred approach, in some case you may
@@ -215,6 +193,4 @@ setup(
         'Bug Reports': 'https://github.com/filewallio/postfix-filter/issues',
         'Source': 'https://github.com/filewallio/postfix-filter',
     },
-
-    cmdclass={'install': CustomInstallCommand}
 )
