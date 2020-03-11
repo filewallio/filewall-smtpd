@@ -1,12 +1,14 @@
-Filewall.io postfix filter
+Filewall.io smptd
 ===================
 
-This is Python code to achieve Advanced Content Filtering with https://filewall.io in Postfix
-( http://www.postfix.org/FILTER_README.html ) . This Python code listens on one port to get emails from Postfix,
-then .. does its magic..  and then re-inject the mail into Postfix. 
+#### ! This is BETA software, don't use it in production !
+  
+This is a forwarding smpt server. It receives mails on one port, sends any attachents through filewall.io, 
+and sends a filtered mail to another smptd. 
 
-What you need to do on Postfix side is to edit configuration according to the suggestions made in the Advanced 
-Content Filtering above, but for your convenience, here is the quick version that could work for you too:
+It can be used to achieve Advanced Content Filtering with https://filewall.io in Postfix
+( http://www.postfix.org/FILTER_README.html ) . 
+
 
 ###### Install service:
 ```
@@ -23,6 +25,10 @@ $ service filewall-smtpd start
 To start filewall-smtpd  at boot time, use ```systemctl enable filewall-smtpd.service```.
 
 
+
+###### Postfix
+What you need to do on Postfix side is to edit configuration according to the suggestions made in the Advanced 
+Content Filtering above, but for your convenience, here is the quick version that could work for you too:
 
 ###### (/etc/postfix/)main.cf:
 ```

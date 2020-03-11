@@ -250,7 +250,7 @@ SENDTO_PORT  = 10026
 
 filewall_smtpd_service = '''
 [Unit]
-Description=Super Description
+Description=Filewall-smtpd
 
 [Service]
 Type=simple

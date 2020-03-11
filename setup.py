@@ -37,7 +37,7 @@ setup(
     # There are some restrictions on what makes a valid project name
     # specification here:
     # https://packaging.python.org/specifications/core-metadata/#name
-    name='filewall_smtpd',  # Required
+    name='filewall-smtpd',  # Required
 
     version='1.0.0',  # Required
 
