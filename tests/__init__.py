@@ -26,7 +26,7 @@ part = MIMEApplication(b'some file content2',Name="filename2")
 msg.attach(part)
 
 # Add image withOUT content diposition
-part = MIMEImage(open("test.png","rb").read())
+part = MIMEImage(open("test.png","rb").read(), name="test.png")
 msg.attach(part)
 
 server = smtplib.SMTP('localhost: 10025')

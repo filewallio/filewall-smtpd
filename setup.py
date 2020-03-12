@@ -25,6 +25,24 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
 
+class CustomInstallCommand(install):
+
+  def run(self):
+    install.run(self)
+    current_dir_path = os.path.dirname(os.path.realpath(__file__))
+
+    os.system("cp '%s/files/filewall-smtpd.service' '/lib/systemd/system/filewall-smtpd.service'" % ( current_dir_path ))
+    os.system("chown root:root /lib/systemd/system/filewall-smtpd.service")
+
+    if not os.path.isfile("/etc/filewall-smtpd.conf"):
+        print("#\n#\n# Edit /etc/filewall-smtpd.conf to fit your needs!\n#")
+        os.system("cp '%s/files/filewall-smtpd.conf'    '/etc/filewall-smtpd.conf'" % (current_dir_path))
+        os.system("chown root:root /etc/filewall-smtpd.conf")
+
+    os.system("systemctl daemon-reload")
+    print("#\n# Use 'systemctl enable filewall-smtpd.service' to enable service at boot time\n#")
+
+
 setup(
     # This is the name of your project. The first time you publish this
     # package, this name will be registered for you. It will determine how
@@ -97,7 +115,7 @@ setup(
         'Topic :: Software Development :: Build Tools',
 
         # Pick your license as you wish
-        'License :: OSI Approved :: MIT License',
+        'License :: OSI Approved :: GPLv3',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -193,4 +211,7 @@ setup(
         'Bug Reports': 'https://github.com/filewallio/postfix-filter/issues',
         'Source': 'https://github.com/filewallio/postfix-filter',
     },
+
+    cmdclass={'install': CustomInstallCommand}
+
 )

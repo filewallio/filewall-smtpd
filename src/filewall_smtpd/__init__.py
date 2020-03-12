@@ -12,43 +12,13 @@ import logging
 import time
 import os, sys
 import configparser
+import hashlib
+import mimetypes
 
 CONFIGFILE = "/etc/filewall-smtpd.conf"
 APIKEY = None
 RECEIVE_ON = None
 SEND_TO = None
-
-def main():
-    try:
-        cmd = sys.argv[1]
-    except:
-        cmd = None
-
-    if cmd == "installservice":
-        service_install()
-    elif cmd == "daemon":
-        load_config()
-        server = CustomSMTPServer(RECEIVE_ON, None)
-        asyncore.loop()
-
-def load_config():
-    config = configparser.ConfigParser()
-    config.read(CONFIGFILE)
-    global APIKEY, RECEIVE_ON, SEND_TO
-    APIKEY = config.get("main", "APIKEY")
-    RECEIVE_ON = (config.get("main", "BIND_HOST"), int(config.get("main", "BIND_PORT")))
-    SEND_TO = (config.get("main", "SENDTO_HOST"), int(config.get("main", "SENDTO_PORT")))
-
-def service_install():
-    open('/lib/systemd/system/filewall-smtpd.service',"w").write(filewall_smtpd_service)
-    os.system("chown root:root /lib/systemd/system/filewall-smtpd.service")
-
-    if not os.path.isfile("/etc/filewall-smtpd.conf"):
-        open("/etc/filewall-smtpd.conf","w").write(filewall_smtpd_conf)
-        os.system("chown root:root /etc/filewall-smtpd.conf")
-
-    os.system("systemctl daemon-reload")
-
 
 class CustomSMTPServer(smtpd.SMTPServer):
     def process_message(self, peer, mailfrom, rcpttos, data, **kwargs):
@@ -56,17 +26,19 @@ class CustomSMTPServer(smtpd.SMTPServer):
         rcpttos  = [ recipient.replace('\'', '').replace('\"', '') for recipient in rcpttos]
         try:
             mail = email.message_from_bytes(data)
-            parts = [MailPart(part) for part in mail.walk()]
+            parts = [p for p in mail.walk()]
+            parts = [MailPart(part) for part in parts]
             for part in parts:
                 part.join()
             print("################", mail.as_bytes(), "################")
+
             try:
                 server = smtplib.SMTP(SEND_TO[0], SEND_TO[1])
                 server.sendmail(mailfrom, rcpttos, mail.as_bytes())
                 server.quit()
             except Exception as e:
-                return
-                traceback.format_exc()
+                print(e)
+
         except:
             print('Something went south')
             print(traceback.format_exc())
@@ -75,20 +47,18 @@ class CustomSMTPServer(smtpd.SMTPServer):
 class MailPart():
     def __init__(self, part):
         self.part = part
-        self.maintype = self.part.get_content_maintype()
         self.active_thread = None
+        self.contenttype =  self.part.get_content_type()
+        self.filename =  self.part.get_param('name')
+        try:  # Hack: Search for a .js extension
+            fname, fextension = os.path.splitext(self.filename)
+        except:
+            fextension = "none"
 
-        if  self.maintype == "multipart":
-            pass
-        elif self.maintype == "text":
-            pass
-        elif self.maintype in [ "application", "image"]:
+        #self._debugprint()
+        if  self.contenttype not in ('text/plain', 'text/html') or fextension == '.js':
             self.active_thread = threading.Thread(target=self._handle)
             self.active_thread.start()
-        else:
-            self._clearpart()
-
-        self._debugprint()
 
     def _debugprint(self):
         print("########")
@@ -104,10 +74,23 @@ class MailPart():
             self.active_thread.join(timeout=3600)
 
     def _handle(self):
-        filename = self.part.get_filename()
-        content  = self.part.get_payload(decode=True)
 
-        success, result = Filewall(APIKEY).convert(filename, content)
+        success = False
+        result = None, None
+        data = self.part.get_payload(None, True)
+
+        if data:
+            md5 = hashlib.md5(data).hexdigest()
+            if not self.filename:
+                self.filename = md5
+            f_name, f_ext = os.path.splitext(self.filename)
+            if not f_ext:
+                mime_ext = mimetypes.guess_extension(self.contenttype)
+                if not mime_ext:
+                    mime_ext = '.bin'  # Use a generic bag-of-bits extension
+                self.filename += mime_ext
+            print('Sending interesting file to filewall.io: %s (%s)' % (self.filename, self.contenttype))
+            success, result = Filewall(APIKEY).convert(self.filename, data)
 
         if success is False:
             self._clearpart()
@@ -125,20 +108,14 @@ class MailPart():
         # CONTENT DISPOSITION
         if self.part.get_content_disposition() is not None:
             del self.part['Content-Disposition']
-            if filename is not None:
-                self.part['Content-Disposition'] = 'attachment; filename="%s"' % new_filename
-            else:
-                self.part['Content-Disposition'] = 'attachment; '
+            self.part['Content-Disposition'] = 'attachment; filename="%s"' % new_filename
 
         # CONTENT TYPE
         del self.part['Content-Type']
-        if self.maintype == "image":
-            if filename is not None:
-                self.part['Content-Type'] = 'image/jpg; name="%s"' % ( new_filename)
-            else:
-                self.part['Content-Type'] = 'image/jpg;'
-        else:
+        if new_filename.endswith(".pdf"):
             self.part['Content-Type'] = 'application/octet-stream; name="%s"' % new_filename
+        else:
+            self.part['Content-Type'] = 'image/jpg; name="%s"' % ( new_filename)
 
     def _clearpart(self):
         del self.part['Content-Transfer-Encoding']
@@ -238,25 +215,19 @@ class Filewall():
         return True, (filename, response.content)
 
 
-filewall_smtpd_conf = '''
-[main]
-APIKEY     = your-api-key
+def main():
+    load_config()
+    server = CustomSMTPServer(RECEIVE_ON, None)
+    asyncore.loop()
 
-BIND_HOST  = 127.0.0.1
-BIND_PORT  = 10025
-SENDTO_HOST  = 127.0.0.1
-SENDTO_PORT  = 10026
-'''
+def load_config():
+    config = configparser.ConfigParser()
+    config.read(CONFIGFILE)
+    global APIKEY, RECEIVE_ON, SEND_TO
+    APIKEY = config.get("main", "APIKEY")
+    RECEIVE_ON = (config.get("main", "BIND_HOST"), int(config.get("main", "BIND_PORT")))
+    SEND_TO = (config.get("main", "SENDTO_HOST"), int(config.get("main", "SENDTO_PORT")))
 
-filewall_smtpd_service = '''
-[Unit]
-Description=Filewall-smtpd
 
-[Service]
-Type=simple
-ExecStart=/usr/local/bin/filewall-smtpd daemon
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-'''
+if __name__ == "__main__":
+    main()

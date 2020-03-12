@@ -12,8 +12,8 @@ It can be used to achieve Advanced Content Filtering with https://filewall.io in
 
 ###### Install service:
 ```
-$ pip install git+https://github.com/filewallio/postfix-filter
-$ filewall-smtpd installservice
+$ sudo pip install git+https://github.com/filewallio/filewall-smtpd
+
 ```
 
 Set your apikey in ```/etc/filewall-smtpd.conf```

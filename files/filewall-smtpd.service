@@ -1,0 +1,10 @@
+[Unit]
+Description=Filewall-smtpd
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/filewall-smtpd daemon
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
