@@ -1,42 +1,58 @@
-Filewall.io smptd
+Filewall SMTPD
 ===================
 
-#### ! This is BETA software, don't use it in production !
+#### Warning: This is beta software and is not intended for use in a production environment.
   
-This is a forwarding smpt server. It receives mails on one port, sends any attachents through filewall.io, 
-and sends a filtered mail to another smptd. 
+This is an SMTP forwarding server that receives email, sends any attachments through Filewall.io for processing, and sends the filtered email to another SMTPD.
 
-It can be used to achieve Advanced Content Filtering with https://filewall.io in Postfix
-( http://www.postfix.org/FILTER_README.html ) . 
+The server and process allows for advanced content filtering with [Filewall](https://filewall.io) using [[Postfix]].
+
+<!--- It can be used to achieve Advanced Content Filtering with https://filewall.io in Postfix
+( http://www.postfix.org/FILTER_README.html ). 
+
+What is the relationship between Filewall and Postfix? 
+
+--->
 
 
-###### Install service:
+## Setting up the SMTP server
+
+### Clone the repository
 ```
 $ sudo pip install git+https://github.com/filewallio/filewall-smtpd
-
 ```
 
-Set your apikey in ```/etc/filewall-smtpd.conf```
+Set the API key in ```/etc/filewall-smtpd.conf``` 
+<!--- 
 
-###### Start Service
+Does this relate at all to obtaining an API key using a filewall account as described in the API docs? 
+
+--->
+
+### Start the service
+
 ```
 $ service filewall-smtpd start
 ```
-To start filewall-smtpd  at boot time, use ```systemctl enable filewall-smtpd.service```.
+To start on boot, use 
 
+```
+systemctl enable filewall-smtpd.service
+```
 
+## Setting up Postfix
 
-###### Postfix
-What you need to do on Postfix side is to edit configuration according to the suggestions made in the Advanced 
-Content Filtering above, but for your convenience, here is the quick version that could work for you too:
+Edit the Postfix configuration using the [Readme](http://www.postfix.org/FILTER_README.html). 
 
-###### (/etc/postfix/)main.cf:
+Alternatively, use the following quick configuration steps:
+
+### (/etc/postfix/)main.cf:
 ```
 content_filter = scan:localhost:10025
 receive_override_options = no_address_mappings
 ```
 
-###### (/etc/postfix/)master.cf:
+### (/etc/postfix/)master.cf:
 ```
 scan      unix  -       -       n       -       10      smtp
       -o smtp_send_xforward_command=yes
@@ -49,8 +65,4 @@ localhost:10026 inet  n       -       n       -       10      smtpd
 ```
 
 
-There are ways combinations of parameters to do that (see the FILTER_README referred above) but only this one 
-worked for me. This is because what I needed is that mails come to my Python code BEFORE processed using 
-virtual table and they get processed using virtual table AFTER. 
-This is what I needed, but you can change the no_address_mappings parameter in main.cf and 
-master.cf to do thy bidding.
+<!--- Do these work for everyone? If not, don't have it here. We want it to be generic enough that anyone can follow with minor modifications --->
